@@ -22,8 +22,8 @@ typedef struct {
     char captureDate[20];
 } Pokemon;
 
-Pokemon* searchById(int id, Pokemon* pokemon) {
-    for (int i = 0; i < MAX_POKEMON; i++) {
+Pokemon* searchById(int id, Pokemon* pokemon, int totalPokemons) {
+    for (int i = 0; i < totalPokemons; i++) {
         if (pokemon[i].id == id)
             return &pokemon[i];
     }
@@ -64,18 +64,17 @@ void selecao(Pokemon** array, int n) {
 int main() {
     FILE* file = fopen("/tmp/pokemon.csv", "r");
     if (file == NULL) {
-        printf("Error opening file\n");
+        printf("Erro ao abrir o arquivo\n");
         return 1;
     }
 
     char line[MAX_LINE_LENGTH];
-    fgets(line, sizeof(line), file);
+    fgets(line, sizeof(line), file); // Ignora o cabeçalho
 
     Pokemon* pokemon = (Pokemon*)malloc(MAX_POKEMON * sizeof(Pokemon));
+    int totalPokemons = 0;
 
-    for (int i = 0; i < MAX_POKEMON; i++) {
-        if (fgets(line, sizeof(line), file) == NULL) break;
-
+    while (fgets(line, sizeof(line), file) != NULL && totalPokemons < MAX_POKEMON) {
         char* atributosTmp[3];
         int count;
         split(line, "[]", atributosTmp, &count);
@@ -86,31 +85,37 @@ int main() {
         char* atributosPos[6];
         split(atributosTmp[2], ",", atributosPos, &count);
 
-        pokemon[i].id = atoi(atributosPre[0]);
-        pokemon[i].generation = atoi(atributosPre[1]);
-        strcpy(pokemon[i].name, atributosPre[2]);
-        strcpy(pokemon[i].description, atributosPre[3]);
+        Pokemon* p = &pokemon[totalPokemons++];
+        p->id = atoi(atributosPre[0]);
+        p->generation = atoi(atributosPre[1]);
+        strcpy(p->name, atributosPre[2]);
+        strcpy(p->description, atributosPre[3]);
 
-        strcpy(pokemon[i].types[0], atributosPre[4]);
+        strcpy(p->types[0], atributosPre[4]);
         if (strlen(atributosPre[5]) > 0) {
-            strcpy(pokemon[i].types[1], atributosPre[5]);
+            strcpy(p->types[1], atributosPre[5]);
+        } else {
+            p->types[1][0] = '\0'; // Tipo secundário vazio
         }
 
         char* abilities[MAX_ABILITIES];
         split(atributosTmp[1], ",", abilities, &count);
         for (int j = 0; j < count && j < MAX_ABILITIES; j++) {
-            strcpy(pokemon[i].abilities[j], abilities[j]);
+            strcpy(p->abilities[j], abilities[j]);
+        }
+        for (int j = count; j < MAX_ABILITIES; j++) {
+            p->abilities[j][0] = '\0'; // Preenche habilidades restantes com vazio
         }
 
-        pokemon[i].weight = atof(atributosPos[1]);
-        pokemon[i].height = atof(atributosPos[2]);
-        pokemon[i].captureRate = atoi(atributosPos[3]);
-        pokemon[i].isLegendary = (strcmp(atributosPos[4], "1") == 0);
-        strcpy(pokemon[i].captureDate, atributosPos[5]);
+        p->weight = atof(atributosPos[1]);
+        p->height = atof(atributosPos[2]);
+        p->captureRate = atoi(atributosPos[3]);
+        p->isLegendary = (strcmp(atributosPos[4], "1") == 0);
+        strcpy(p->captureDate, atributosPos[5]);
     }
-
     fclose(file);
 
+    // Leitura dos IDs
     char id[10];
     Pokemon* selectedPokemon[100];
     int selectedCount = 0;
@@ -120,28 +125,27 @@ int main() {
         id[strcspn(id, "\n")] = 0;
         if (isFim(id)) break;
 
-        Pokemon* pokemon1 = searchById(atoi(id), pokemon);
-        if (pokemon1 != NULL) {
-            selectedPokemon[selectedCount++] = pokemon1;
+        Pokemon* p = searchById(atoi(id), pokemon, totalPokemons);
+        if (p != NULL) {
+            selectedPokemon[selectedCount++] = p;
         }
     }
 
-
+    // Ordenação dos Pokémon selecionados
     selecao(selectedPokemon, selectedCount);
 
-    // Imprime os Pokémon ordenados
+    // Impressão dos Pokémon ordenados
     for (int i = 0; i < selectedCount; i++) {
         if (selectedPokemon[i] != NULL) {
-
             char habilidadesStr[200] = "";
             for (int j = 0; j < MAX_ABILITIES && selectedPokemon[i]->abilities[j][0] != '\0'; j++) {
                 strcat(habilidadesStr, selectedPokemon[i]->abilities[j]);
                 if (j < MAX_ABILITIES - 1 && selectedPokemon[i]->abilities[j + 1][0] != '\0') {
-                    strcat(habilidadesStr, ",");
+                    strcat(habilidadesStr, ", ");
                 }
             }
 
-            printf("[#%d -> %s: %s - [%s, %s] - [%s] - %.1fkg - %.1fm - %d%% - %s - %d gen] - %s",
+            printf("[#%d -> %s: %s - [%s, %s] - [%s] - %.1fkg - %.1fm - %d%% - %s - %d gen] - %s\n",
                    selectedPokemon[i]->id,
                    selectedPokemon[i]->name,
                    selectedPokemon[i]->description,

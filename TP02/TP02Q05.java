@@ -90,6 +90,7 @@ class TP02Q05 {
         file.readLine(); // Pular a primeira linha que não é útil
         Pokemon[] pokemon = new Pokemon[801]; // Criando um array de Pokémon para guardar todos
 
+
         // Lendo os dados do arquivo e criando os objetos de Pokemon
         for (int i = 0; i < 801; i++) {
             String line = file.readLine();

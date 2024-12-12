@@ -6,7 +6,7 @@
 #define MAX_POKEMON 801
 #define MAX_LINE_LENGTH 1000
 #define MAX_TYPES 2
-#define MAX_ABILITIES 6 // Ajustado para caber as habilidades
+#define MAX_ABILITIES 4
 
 typedef struct {
     int id;
@@ -43,20 +43,20 @@ void split(char* str, const char* delim, char** result, int* count) {
     }
 }
 
+// Função de ordenação por seleção baseada em weight e name
 void selecao(Pokemon** array, int n) {
     for (int i = 0; i < n - 1; i++) {
         int menor = i;
         for (int j = i + 1; j < n; j++) {
             if (array[j] != NULL && array[menor] != NULL) {
-                // Compara as habilidades (primeira habilidade)
-                int firstAbilityComparison = strcmp(array[j]->abilities[0], array[menor]->abilities[0]);
-                if (firstAbilityComparison < 0) {
-                    menor = j; // Habilidade de j é menor, então atualiza menor
-                } else if (firstAbilityComparison == 0) {
-                    // Se as habilidades forem iguais, compara os nomes
-                    if (strcmp(array[j]->name, array[menor]->name) < 0) {
-                        menor = j; // Nome de j é menor, então atualiza menor
-                    }
+                // Primeiro, compara pelo peso
+                if (array[j]->weight < array[menor]->weight) {
+                    menor = j;
+                }
+                // Se os pesos são iguais, compara pelo nome
+                else if (array[j]->weight == array[menor]->weight && 
+                         strcmp(array[j]->name, array[menor]->name) < 0) {
+                    menor = j;
                 }
             }
         }
@@ -83,49 +83,39 @@ int main() {
     for (int i = 0; i < MAX_POKEMON; i++) {
         if (fgets(line, sizeof(line), file) == NULL) break;
 
-        // Remove qualquer nova linha ou espaços em branco
-        line[strcspn(line, "\n")] = 0;
-
         char* atributosTmp[3];
         int count;
         split(line, "[]", atributosTmp, &count);
 
-        // Corrigindo a leitura dos atributos
         char* atributosPre[6];
         split(atributosTmp[0], ",", atributosPre, &count);
 
         char* atributosPos[6];
         split(atributosTmp[2], ",", atributosPos, &count);
 
-        // Verificando se a quantidade de atributos é válida
-        if (count >= 6) {
-            pokemon[i].id = atoi(atributosPre[0]);
-            pokemon[i].generation = atoi(atributosPre[1]);
-            strcpy(pokemon[i].name, atributosPre[2]);
-            strcpy(pokemon[i].description, atributosPre[3]);
+        pokemon[i].id = atoi(atributosPre[0]);
+        pokemon[i].generation = atoi(atributosPre[1]);
+        strcpy(pokemon[i].name, atributosPre[2]);
+        strcpy(pokemon[i].description, atributosPre[3]);
 
-            // Processando os tipos
-            strcpy(pokemon[i].types[0], atributosPre[4]);
-            if (strlen(atributosPre[5]) > 0) {
-                strcpy(pokemon[i].types[1], atributosPre[5]);
-            } else {
-                strcpy(pokemon[i].types[1], "N/A"); // Use "N/A" se não houver segundo tipo
-            }
-
-            // Processando as habilidades
-            char* abilities[MAX_ABILITIES];
-            split(atributosTmp[1], ",", abilities, &count);
-            for (int j = 0; j < count && j < MAX_ABILITIES; j++) {
-                strcpy(pokemon[i].abilities[j], abilities[j]);
-            }
-
-            // Atribuindo valores restantes
-            pokemon[i].weight = atof(atributosPos[1]);
-            pokemon[i].height = atof(atributosPos[2]);
-            pokemon[i].captureRate = atoi(atributosPos[3]);
-            pokemon[i].isLegendary = (strcmp(atributosPos[4], "1") == 0);
-            strcpy(pokemon[i].captureDate, atributosPos[5]);
+        strcpy(pokemon[i].types[0], atributosPre[4]);
+        if (strlen(atributosPre[5]) > 0) {
+            strcpy(pokemon[i].types[1], atributosPre[5]);
+        } else {
+            strcpy(pokemon[i].types[1], "N/A"); // Use "N/A" se não houver segundo tipo
         }
+
+        char* abilities[MAX_ABILITIES];
+        split(atributosTmp[1], ",", abilities, &count);
+        for (int j = 0; j < count && j < MAX_ABILITIES; j++) {
+            strcpy(pokemon[i].abilities[j], abilities[j]);
+        }
+
+        pokemon[i].weight = atof(atributosPos[1]);
+        pokemon[i].height = atof(atributosPos[2]);
+        pokemon[i].captureRate = atoi(atributosPos[3]);
+        pokemon[i].isLegendary = (strcmp(atributosPos[4], "1") == 0);
+        strcpy(pokemon[i].captureDate, atributosPos[5]);
     }
 
     fclose(file);
@@ -145,7 +135,7 @@ int main() {
         }
     }
 
-    // Ordena os Pokémon selecionados pela primeira habilidade e nome
+    // Ordena os Pokémon selecionados pelo peso e nome
     selecao(selectedPokemon, selectedCount);
     
     for (int i = 0; i < selectedCount; i++) {
@@ -159,8 +149,7 @@ int main() {
             }
             
             // Imprime informações do Pokémon
-            printf("[%d] [#%d -> %s: %s - [%s, %s] - [%s] - %.1fkg - %.1fm - %d%% - %s - %d gen] - %s\n",
-                   i,
+            printf("[#%d -> %s: %s - [%s, %s] - [%s] - %.1fkg - %.1fm - %d%% - %s - %d gen] - %s",
                    selectedPokemon[i]->id,
                    selectedPokemon[i]->name,
                    selectedPokemon[i]->description,
